@@ -1,6 +1,8 @@
 #En este caso tenemos problemas para ejecutar mas de una tarea en un ciclo
 #La solucion que tenemos a esto son las interrupciones por Timer
 #Es decir interrupciones pausar la ejecucion del programa para ir atender otra porcion de codigo
+#https://wokwi.com/projects/373607931267328001
+
 
 from machine import Pin, Timer
 import dht
