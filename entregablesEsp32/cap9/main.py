@@ -1,24 +1,49 @@
+#https://wokwi.com/projects/373688143020945409
+#Enunciado
+#Escribir un programa para el esp32, basado en el circuito utilizado en el capítulo 9,
+#que publique un solo mensaje, a un broker mqtt, cuando la temperatura supera un valor establecido como
+#"temperatura superior". El sistema no volverá a publicar mensajes hasta no haber estado por debajo de un
+#límite inferior y volver a superar la temperatura superior.
+from machine import Pin, Timer, unique_id
 import dht
-import machine
 import time
+import json
+import ubinascii
+from collections import OrderedDict
+from settings import SERVIDOR_MQTT
+from umqtt.robust import MQTTClient
 
-# Configurar el pin al que está conectado el sensor DHT22
-dht_pin = machine.Pin(4)
+CLIENT_ID = ubinascii.hexlify(unique_id()).decode('utf-8')
 
-# Crear una instancia del sensor DHT22
-dht_sensor = dht.DHT22(dht_pin)
+mqtt = MQTTClient(CLIENT_ID, SERVIDOR_MQTT,
+                  port=8883, keepalive=10, ssl=True)
+
+led = Pin(2, Pin.OUT)
+d = dht.DHT22(Pin(25))
+#
+Tmin = 20
+Tmax = 30
+bandera = True
 
 while True:
     try:
-        # Realizar la lectura del sensor
-        dht_sensor.measure()
-        humidity = dht_sensor.humidity()
-        temperature = dht_sensor.temperature()
+        d.measure()
+        temperatura = d.temperature()
+        humedad = d.humidity()
+        datos = json.dumps(OrderedDict([
+            ('temperatura',temperatura),
+            ('humedad',humedad)
+        ]))
+        print(datos)
+        if temperatura > Tmax and bandera:
+            print("publicando")
+            mqtt.connect()
+            mqtt.publish(f"aptest/{CLIENT_ID}",datos)
+            mqtt.disconnect()
+            bandera = False
+        if temperatura < Tmin:
+            bandera = True
 
-        # Mostrar los resultados en la terminal
-        print("Humedad: {}% - Temperatura: {}°C".format(humidity, temperature))
     except OSError as e:
-        print("Error al leer el sensor DHT22:", e)
-
-    # Esperar 20 segundos antes de la próxima lectura
-    time.sleep(20)
+        print("sin sensor")
+    time.sleep(5)
